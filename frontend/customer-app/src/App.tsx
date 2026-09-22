@@ -2,7 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
-import Home from './pages/Home';
+import Restaurants from './pages/Restaurants';
+import RestaurantDetail from './pages/RestaurantDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -15,7 +16,15 @@ function App() {
         path="/home"
         element={
           <ProtectedRoute>
-            <Home />
+            <Restaurants />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/restaurants/:id"
+        element={
+          <ProtectedRoute>
+            <RestaurantDetail />
           </ProtectedRoute>
         }
       />
