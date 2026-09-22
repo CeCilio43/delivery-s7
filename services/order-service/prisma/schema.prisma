@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY
+  PICKED_UP
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  customerId   String
+  restaurantId String
+  status       OrderStatus @default(PLACED)
+  totalAmount  Decimal     @db.Decimal(10, 2)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  lines OrderLine[]
+
+  @@index([customerId])
+  @@index([restaurantId])
+}
+
+model OrderLine {
+  id         String  @id @default(uuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  name       String
+  unitPrice  Decimal @db.Decimal(10, 2)
+  quantity   Int
+
+  @@index([orderId])
+}

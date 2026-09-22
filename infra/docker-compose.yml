@@ -1,15 +1,18 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: food-delivery-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_MULTIPLE_DATABASES: user_db,restaurant_db,order_db,payment_db,notification_db
+      POSTGRES_DB: postgres
+      POSTGRES_MULTIPLE_DATABASES: user_service_db,restaurant_service_db,order_service_db,payment_service_db
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -34,7 +37,7 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/user_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/user_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
     depends_on:
       postgres:
@@ -49,7 +52,7 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/restaurant_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/restaurant_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
     depends_on:
       postgres:
@@ -64,7 +67,7 @@ services:
       - "3003:3003"
     environment:
       PORT: 3003
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/order_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
     depends_on:
       postgres:
@@ -79,7 +82,7 @@ services:
       - "3004:3004"
     environment:
       PORT: 3004
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/payment_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payment_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
     depends_on:
       postgres:
@@ -94,7 +97,7 @@ services:
       - "3005:3005"
     environment:
       PORT: 3005
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/notification_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/notification_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
     depends_on:
       postgres:
@@ -115,4 +118,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
+  pgdata:
