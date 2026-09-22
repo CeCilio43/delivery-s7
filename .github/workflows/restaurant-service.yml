@@ -35,6 +35,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Set lowercase image owner
+        id: owner
+        run: echo "name=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -45,5 +48,5 @@ jobs:
           context: services/restaurant-service
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/restaurant-service:latest
-            ghcr.io/${{ github.repository_owner }}/restaurant-service:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.name }}/restaurant-service:latest
+            ghcr.io/${{ steps.owner.outputs.name }}/restaurant-service:${{ github.sha }}
