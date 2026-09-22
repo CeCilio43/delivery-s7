@@ -1,0 +1,9 @@
+{
+  "event": "restaurant.order_received",
+  "version": 1,
+  "payload": {
+    "orderId": "string",
+    "restaurantId": "string",
+    "receivedAt": "ISO8601 string"
+  }
+}

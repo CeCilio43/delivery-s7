@@ -1,0 +1,10 @@
+{
+  "event": "payment.succeeded",
+  "version": 1,
+  "payload": {
+    "paymentId": "string",
+    "orderId": "string",
+    "amount": "number",
+    "succeededAt": "ISO8601 string"
+  }
+}

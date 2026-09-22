@@ -1,0 +1,9 @@
+{
+  "event": "order.cancelled",
+  "version": 1,
+  "payload": {
+    "orderId": "string",
+    "reason": "string",
+    "cancelledAt": "ISO8601 string"
+  }
+}

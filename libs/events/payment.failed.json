@@ -1,0 +1,10 @@
+{
+  "event": "payment.failed",
+  "version": 1,
+  "payload": {
+    "paymentId": "string",
+    "orderId": "string",
+    "reason": "string",
+    "failedAt": "ISO8601 string"
+  }
+}

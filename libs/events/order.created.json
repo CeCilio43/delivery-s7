@@ -1,0 +1,12 @@
+{
+  "event": "order.created",
+  "version": 1,
+  "payload": {
+    "orderId": "string",
+    "customerId": "string",
+    "restaurantId": "string",
+    "items": [{ "menuItemId": "string", "quantity": "number", "price": "number" }],
+    "total": "number",
+    "createdAt": "ISO8601 string"
+  }
+}
