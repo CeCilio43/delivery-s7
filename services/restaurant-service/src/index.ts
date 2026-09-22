@@ -1,8 +1,5 @@
-import express from 'express';
+import { app } from './app';
 
-const app = express();
 const PORT = process.env.PORT || 3000;
-
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'restaurant-service' }));
 
 app.listen(PORT, () => console.log(`restaurant-service listening on ${PORT}`));
