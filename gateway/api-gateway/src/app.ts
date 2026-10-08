@@ -7,11 +7,15 @@ import { openApiSpec } from './openapi';
 
 export const app = express();
 
-// The customer-app runs on a different origin (Vite dev server) and sends
-// an Authorization header on protected requests, both of which trigger a
-// CORS preflight that the browser blocks without this.
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-app.use(cors({ origin: FRONTEND_URL }));
+// The frontends run on other origins (customer-app on 5173, restaurant-app
+// on 5174 in development) and send an Authorization header on protected
+// requests, both of which trigger a CORS preflight that the browser blocks
+// without this. FRONTEND_URLS is a comma-separated list of allowed origins.
+const FRONTEND_URLS = (process.env.FRONTEND_URLS ?? 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+app.use(cors({ origin: FRONTEND_URLS }));
 
 // Downstream services trust these headers to identify the caller, so a
 // client must never be able to set them; only the protected proxies below
