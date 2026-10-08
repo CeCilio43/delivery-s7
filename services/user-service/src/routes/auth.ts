@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../prisma';
 import passport from '../auth/passport';
@@ -7,11 +7,24 @@ import { signToken } from '../auth/jwt';
 
 const router = Router();
 
-router.post('/register', async (req, res) => {
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
+/** Creates an account with `role` and signs it straight in. */
+async function register(req: Request, res: Response, role: Role) {
   const { email, password, name } = req.body ?? {};
 
   if (!email || !password) {
     return res.status(400).json({ error: 'email and password are required' });
+  }
+  if (typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address' });
+  }
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+  }
+  if (name !== undefined && typeof name !== 'string') {
+    return res.status(400).json({ error: 'name must be a string' });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -21,7 +34,7 @@ router.post('/register', async (req, res) => {
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash, name, role: Role.CUSTOMER },
+    data: { email, passwordHash, name: name?.trim() || null, role },
   });
 
   const token = signToken(user);
@@ -29,7 +42,15 @@ router.post('/register', async (req, res) => {
     token,
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
   });
-});
+}
+
+// Customers sign up from the customer-app.
+router.post('/register', (req, res) => register(req, res, Role.CUSTOMER));
+
+// Restaurant owners sign up from the restaurant-app, then register their
+// restaurant there. Only these two roles can be self-assigned; couriers and
+// admins can't sign themselves up.
+router.post('/register/restaurant-owner', (req, res) => register(req, res, Role.RESTAURANT_OWNER));
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body ?? {};
