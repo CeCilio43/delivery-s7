@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getRestaurantById, type RestaurantDetail as RestaurantDetailData } from '../api/restaurants';
+import { addItemToCart } from '../api/cart';
 import OpenBadge from '../components/OpenBadge';
+import Button from '../components/Button';
 
 export default function RestaurantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -9,6 +11,21 @@ export default function RestaurantDetail() {
   const [restaurant, setRestaurant] = useState<RestaurantDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addingItemId, setAddingItemId] = useState<string | null>(null);
+
+  const handleAddToCart = async (menuItemId: string) => {
+    if (!id) return;
+    setAddingItemId(menuItemId);
+    try {
+      await addItemToCart(id, menuItemId);
+    } catch {
+      // The notification toast surfaces success; a failed publish is logged
+      // server-side, so there's nothing actionable to show here beyond
+      // letting the button re-enable.
+    } finally {
+      setAddingItemId(null);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -85,9 +102,19 @@ export default function RestaurantDetail() {
                           <p className="mt-1 font-body text-sm text-muted">{item.description}</p>
                         )}
                       </div>
-                      <span className="font-body text-sm font-medium text-charcoal">
-                        {Number(item.price).toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-4">
+                        <span className="font-body text-sm font-medium text-charcoal">
+                          {Number(item.price).toFixed(2)}
+                        </span>
+                        <Button
+                          variant="secondary"
+                          className="w-auto px-4 py-2 text-[13px]"
+                          disabled={addingItemId === item.id}
+                          onClick={() => handleAddToCart(item.id)}
+                        >
+                          {addingItemId === item.id ? 'Adding…' : 'Add to cart'}
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}

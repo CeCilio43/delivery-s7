@@ -39,6 +39,7 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/user_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
+      JWT_SECRET: dev-local-jwt-secret-change-me
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,6 +70,7 @@ services:
       PORT: 3003
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
+      RESTAURANT_SERVICE_URL: http://restaurant-service:3002
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,6 +86,8 @@ services:
       PORT: 3004
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payment_service_db?schema=public
       RABBITMQ_URL: amqp://rabbitmq:5672
+      # Simulated payment provider declines any order total above this.
+      PAYMENT_DECLINE_ABOVE: 100
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,9 +117,25 @@ services:
     environment:
       PORT: 3000
       RABBITMQ_URL: amqp://rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3001
+      RESTAURANT_SERVICE_URL: http://restaurant-service:3002
+      ORDER_SERVICE_URL: http://order-service:3003
+      PAYMENT_SERVICE_URL: http://payment-service:3004
+      NOTIFICATION_SERVICE_URL: http://notification-service:3005
+      JWT_SECRET: dev-local-jwt-secret-change-me
     depends_on:
       rabbitmq:
         condition: service_healthy
+      user-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
 
 volumes:
   pgdata:

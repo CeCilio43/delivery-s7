@@ -1,0 +1,423 @@
+# OpenAPI description of every route the api-gateway exposes, rendered by
+# Swagger UI at /docs. Keep in sync with the proxy routes in src/app.ts and
+# the handlers in each service. Examples use the seeded dev data.
+openapi: 3.0.3
+info:
+  title: Food Delivery API
+  version: 1.0.0
+  description: |
+    Every request goes through the **api-gateway**, which routes it to the owning microservice.
+
+    **To call protected endpoints:** run `POST /login` (e.g. `jamie@example.com` / `password123`),
+    copy the `token` from the response, click **Authorize** and paste it.
+
+    **Order flow (event-driven over RabbitMQ):** `POST /orders` publishes `order.created` →
+    payment-service charges it and publishes `payment.succeeded` or `payment.failed` →
+    order-service moves the order to `CONFIRMED` or `CANCELLED` → restaurant-service publishes
+    `restaurant.order_received`. The flow is asynchronous, so poll `GET /orders/{id}` for the
+    outcome. Orders over 100.00 are declined by the simulated payment provider, so the failure
+    path can be tested too.
+servers:
+  - url: /
+    description: This api-gateway
+tags:
+  - name: Gateway
+  - name: Auth
+    description: user-service
+  - name: Restaurants
+    description: restaurant-service
+  - name: Orders
+    description: order-service
+  - name: Payments
+    description: payment-service
+
+paths:
+  /health:
+    get:
+      tags: [Gateway]
+      summary: Gateway health check
+      responses:
+        '200': { description: Gateway is up }
+
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Credentials'
+                - type: object
+                  properties:
+                    name: { type: string }
+            example: { email: new.customer@example.com, password: password123, name: New Customer }
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Log in and receive a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '200':
+          description: Logged in — paste `token` into the Authorize dialog
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/google:
+    get:
+      tags: [Auth]
+      summary: Start Google OAuth sign-in
+      description: Browser redirect flow — open it in a browser tab; it cannot complete inside Swagger UI.
+      responses:
+        '302': { description: Redirect to Google }
+
+  /restaurants:
+    get:
+      tags: [Restaurants]
+      summary: List restaurants
+      parameters:
+        - name: search
+          in: query
+          description: Case-insensitive match on name or cuisine
+          schema: { type: string }
+      responses:
+        '200':
+          description: Restaurants
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RestaurantSummary' }
+
+  /restaurants/{id}:
+    get:
+      tags: [Restaurants]
+      summary: Get a restaurant with its menu
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, example: 33333333-3333-3333-3333-333333333331 }
+      responses:
+        '200':
+          description: Restaurant and menu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestaurantDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /restaurants/{restaurantId}/cart/items:
+    post:
+      tags: [Restaurants]
+      summary: Add an item to the cart (demo)
+      description: >
+        There is no persisted cart yet. Publishes a `hello.world` event that
+        notification-service pushes to connected websocket clients.
+      parameters:
+        - name: restaurantId
+          in: path
+          required: true
+          schema: { type: string, example: 33333333-3333-3333-3333-333333333331 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menuItemId]
+              properties:
+                menuItemId: { type: string, format: uuid }
+            example: { menuItemId: 44444444-4444-4444-4444-444444444441 }
+      responses:
+        '202': { description: Event published }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/Upstream' }
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: List the logged-in customer's orders
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Orders, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Orders]
+      summary: Place an order
+      description: >
+        Prices are looked up from restaurant-service. The order starts as
+        `PLACED`; payment happens asynchronously over the event bus.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrder' }
+      responses:
+        '201':
+          description: Order placed and `order.created` published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          description: A menu item is unknown or unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502': { $ref: '#/components/responses/Upstream' }
+        '503':
+          description: Event bus unreachable; the order was not placed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get one of your orders
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel an order
+      description: >
+        Allowed while `PLACED` or `CONFIRMED`. Publishes `order.cancelled`;
+        payment-service then refunds a payment that already succeeded.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200':
+          description: Order cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /payments:
+    get:
+      tags: [Payments]
+      summary: List the logged-in customer's payments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: query
+          description: Only payments for this order
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Payments, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /payments/{id}:
+    get:
+      tags: [Payments]
+      summary: Get one of your payments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200':
+          description: The payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing, invalid or expired credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflicts with the current state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Upstream:
+      description: A downstream service or the event bus is unreachable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: jamie@example.com }
+        password: { type: string, example: password123 }
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string }
+            name: { type: string, nullable: true }
+            role: { type: string, enum: [CUSTOMER, RESTAURANT_OWNER, COURIER, ADMIN] }
+
+    RestaurantSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        cuisine: { type: string, nullable: true }
+        address: { type: string }
+        isOpen: { type: boolean }
+
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        restaurantId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price: { type: string, example: '12.5' }
+        isAvailable: { type: boolean }
+
+    RestaurantDetail:
+      allOf:
+        - $ref: '#/components/schemas/RestaurantSummary'
+        - type: object
+          properties:
+            description: { type: string, nullable: true }
+            menuItems:
+              type: array
+              items: { $ref: '#/components/schemas/MenuItem' }
+
+    CreateOrder:
+      type: object
+      required: [restaurantId, items]
+      properties:
+        restaurantId: { type: string, format: uuid }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [menuItemId, quantity]
+            properties:
+              menuItemId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1 }
+      example:
+        restaurantId: 33333333-3333-3333-3333-333333333331
+        items:
+          - { menuItemId: 44444444-4444-4444-4444-444444444441, quantity: 2 }
+          - { menuItemId: 44444444-4444-4444-4444-444444444442, quantity: 1 }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        restaurantId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [PLACED, CONFIRMED, PREPARING, READY, PICKED_UP, DELIVERED, COMPLETED, CANCELLED]
+        totalAmount: { type: string, example: '29.5' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              menuItemId: { type: string, format: uuid }
+              name: { type: string }
+              unitPrice: { type: string, example: '12.5' }
+              quantity: { type: integer }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        amount: { type: string, example: '29.5' }
+        status: { type: string, enum: [PENDING, SUCCEEDED, FAILED, REFUNDED] }
+        providerRef: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
