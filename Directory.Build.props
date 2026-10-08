@@ -7,4 +7,20 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Every *.Tests project is an xunit project. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <!-- Threading TestContext.Current.CancellationToken through every HTTP call adds noise, not safety. -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)libs\Delivery.Testing\Delivery.Testing.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
 </Project>

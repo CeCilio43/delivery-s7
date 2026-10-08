@@ -14,6 +14,8 @@ public abstract class EventSubscriber(IEventBus bus, IServiceScopeFactory scopes
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
     protected IEventBus Bus { get; } = bus;
+    protected IServiceScopeFactory Scopes { get; } = scopes;
+    protected ILogger Logger { get; } = logger;
 
     protected abstract Task SubscribeAsync(CancellationToken cancellationToken);
 
@@ -21,7 +23,7 @@ public abstract class EventSubscriber(IEventBus bus, IServiceScopeFactory scopes
     protected Task On<T>(string queueName, string routingKey, Func<IServiceProvider, T, Task> handler, CancellationToken cancellationToken) =>
         Bus.SubscribeAsync<T>(queueName, routingKey, async payload =>
         {
-            await using var scope = scopes.CreateAsyncScope();
+            await using var scope = Scopes.CreateAsyncScope();
             await handler(scope.ServiceProvider, payload);
         }, cancellationToken);
 
@@ -36,7 +38,7 @@ public abstract class EventSubscriber(IEventBus bus, IServiceScopeFactory scopes
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogError(ex, "Failed to subscribe to the event bus; retrying in {Delay}", RetryDelay);
+                Logger.LogError(ex, "Failed to subscribe to the event bus; retrying in {Delay}", RetryDelay);
                 await Task.Delay(RetryDelay, stoppingToken);
             }
         }

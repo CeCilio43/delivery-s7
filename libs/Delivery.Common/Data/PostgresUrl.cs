@@ -19,6 +19,9 @@ public static class PostgresUrl
             Port = uri.IsDefaultPort || uri.Port <= 0 ? 5432 : uri.Port,
             Database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')),
             Username = Uri.UnescapeDataString(credentials[0]),
+            // Skips probing for Kerberos (GSS) encryption, which the slim .NET
+            // images can't do and would log an error about on every start.
+            GssEncryptionMode = GssEncryptionMode.Disable,
         };
         if (credentials.Length > 1) builder.Password = Uri.UnescapeDataString(credentials[1]);
 

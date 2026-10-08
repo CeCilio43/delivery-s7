@@ -33,13 +33,22 @@ public static class PrismaMigrator
 
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PrismaMigrator));
         var directory = Path.Combine(AppContext.BaseDirectory, "Migrations");
-        await ApplyAsync(db.Database.GetConnectionString()!, directory, logger, cancellationToken);
+
+        // The context's own connection: its connection string, once read back,
+        // no longer contains the password.
+        await db.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            await ApplyAsync((NpgsqlConnection)db.Database.GetDbConnection(), directory, logger, cancellationToken);
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
     }
 
-    public static async Task ApplyAsync(string connectionString, string directory, ILogger logger, CancellationToken cancellationToken = default)
+    private static async Task ApplyAsync(NpgsqlConnection connection, string directory, ILogger logger, CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
 
         await ExecuteAsync(connection, $"SELECT pg_advisory_lock({LockKey})", cancellationToken);
         try
@@ -72,6 +81,7 @@ public static class PrismaMigrator
                 .Where(name => !applied.Contains(name))
                 .Order(StringComparer.Ordinal);
 
+            var migrated = false;
             foreach (var name in pending)
             {
                 var file = Path.Combine(directory, name, "migration.sql");
@@ -93,7 +103,12 @@ public static class PrismaMigrator
                 }
                 await transaction.CommitAsync(cancellationToken);
                 logger.LogInformation("Applied migration {Migration}", name);
+                migrated = true;
             }
+
+            // Npgsql read the database's types when it first connected, before
+            // the migrations created this service's enum types.
+            if (migrated) await connection.ReloadTypesAsync(cancellationToken);
         }
         finally
         {

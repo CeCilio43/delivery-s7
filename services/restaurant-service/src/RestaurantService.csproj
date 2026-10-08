@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>RestaurantService</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\libs\Delivery.Common\Delivery.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Migrations\**\*.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

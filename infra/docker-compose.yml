@@ -32,7 +32,9 @@ services:
 
   user-service:
     build:
-      context: ../services/user-service
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: services/user-service/Dockerfile
     ports:
       - "3001:3001"
     environment:
@@ -48,7 +50,9 @@ services:
 
   restaurant-service:
     build:
-      context: ../services/restaurant-service
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: services/restaurant-service/Dockerfile
     ports:
       - "3002:3002"
     environment:
@@ -63,7 +67,9 @@ services:
 
   order-service:
     build:
-      context: ../services/order-service
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: services/order-service/Dockerfile
     ports:
       - "3003:3003"
     environment:
@@ -79,7 +85,9 @@ services:
 
   payment-service:
     build:
-      context: ../services/payment-service
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: services/payment-service/Dockerfile
     ports:
       - "3004:3004"
     environment:
@@ -96,7 +104,9 @@ services:
 
   notification-service:
     build:
-      context: ../services/notification-service
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: services/notification-service/Dockerfile
     ports:
       - "3005:3005"
     environment:
@@ -111,7 +121,9 @@ services:
 
   api-gateway:
     build:
-      context: ../gateway/api-gateway
+      # The repository root, so the image can include libs/Delivery.Common.
+      context: ..
+      dockerfile: gateway/api-gateway/Dockerfile
     ports:
       - "3000:3000"
     environment:

@@ -1,6 +1,9 @@
 node_modules/
 dist/
+bin/
+obj/
 .env
 .env.local
 *.log
 .DS_Store
+TestResults/

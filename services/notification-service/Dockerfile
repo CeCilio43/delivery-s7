@@ -1,14 +1,14 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+# Built from the repository root (see infra/docker-compose.yml), since the
+# service depends on the shared libs/Delivery.Common project.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /repo
+COPY Directory.Build.props global.json ./
+COPY libs/Delivery.Common/ libs/Delivery.Common/
+COPY services/notification-service/src/ services/notification-service/src/
+RUN dotnet publish services/notification-service/src -c Release -o /app
 
-FROM node:20-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY package*.json ./
+COPY --from=build /app ./
 EXPOSE 3005
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["dotnet", "NotificationService.dll"]

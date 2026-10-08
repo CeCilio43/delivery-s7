@@ -33,7 +33,7 @@ public static class PrismaSchema
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
                     property.SetValueConverter(UtcTimestamp);
-                    property.SetColumnType("timestamp(3) without time zone");
+                    property.SetColumnType("timestamp(3)");
                 }
             }
         }
