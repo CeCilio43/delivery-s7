@@ -1,32 +1,50 @@
-# React + TypeScript + Vite
+# customer-app
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The customers' frontend: browse restaurants, fill a cart, place orders and
+follow them live. It talks only to the api-gateway.
 
-Currently, two official plugins are available:
+## Running it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requires Node `^20.19.0 || >=22.12.0` (Vite 8, Vitest and oxlint need it).
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+cp .env.example .env   # VITE_API_GATEWAY_URL, defaults to http://localhost:3000
+npm install
+npm run dev            # http://localhost:5173 (restaurant-app uses 5174)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Sign in with a seeded customer, e.g. `jamie@example.com` / `password123`.
+
+## Scripts
+
+| Script               | What it does                              |
+| -------------------- | ----------------------------------------- |
+| `npm run dev`        | Vite dev server on port 5173              |
+| `npm run build`      | Typecheck and build into `dist/`          |
+| `npm run lint`       | oxlint                                    |
+| `npm test`           | Vitest + React Testing Library, once      |
+| `npm run test:watch` | Vitest in watch mode                      |
+
+## Structure
+
+```
+src/
+  api/         axios client for the gateway (adds the JWT) and one module per resource
+  components/  shared UI (Button, AppNav, OrderStatusBadge, ...)
+  context/     Auth (signed-in user), Cart (per-user, in localStorage),
+               Notification (websocket for live order updates + toasts)
+  hooks/       usePolling: fallback while the websocket is down
+  lib/         token decoding, formatting helpers
+  pages/       one component per route
+  test/        Vitest setup and helpers (makeToken, renderWithProviders,
+               mockGet, a FakeWebSocket to push order updates)
+```
+
+Tests sit next to the code they cover (`*.test.ts(x)`).
+
+## Docker
+
+`Dockerfile` builds the app and serves it with nginx; `nginx.conf` falls back
+to `index.html` so client-side routes survive a refresh. CI
+(`.github/workflows/customer-app.yml`) lints, tests and builds on every PR,
+and pushes the image to GHCR on `main`.
