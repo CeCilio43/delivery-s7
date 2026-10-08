@@ -124,34 +124,6 @@ paths:
               schema: { $ref: '#/components/schemas/RestaurantDetail' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /restaurants/{restaurantId}/cart/items:
-    post:
-      tags: [Restaurants]
-      summary: Add an item to the cart (demo)
-      description: >
-        There is no persisted cart yet. Publishes a `hello.world` event that
-        notification-service pushes to connected websocket clients.
-      parameters:
-        - name: restaurantId
-          in: path
-          required: true
-          schema: { type: string, example: 33333333-3333-3333-3333-333333333331 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [menuItemId]
-              properties:
-                menuItemId: { type: string, format: uuid }
-            example: { menuItemId: 44444444-4444-4444-4444-444444444441 }
-      responses:
-        '202': { description: Event published }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '502': { $ref: '#/components/responses/Upstream' }
-
   /orders:
     get:
       tags: [Orders]

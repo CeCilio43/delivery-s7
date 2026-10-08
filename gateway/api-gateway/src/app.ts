@@ -36,7 +36,6 @@ const USER_SERVICE_URL = process.env.USER_SERVICE_URL ?? 'http://localhost:3001'
 const RESTAURANT_SERVICE_URL = process.env.RESTAURANT_SERVICE_URL ?? 'http://localhost:3002';
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL ?? 'http://localhost:3003';
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL ?? 'http://localhost:3004';
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL ?? 'http://localhost:3005';
 
 // Auth routes are unauthenticated by design and proxy straight through to
 // user-service, so they're mounted ahead of the requireAuth gate below.
@@ -67,18 +66,8 @@ app.use(
   }),
 );
 
-// Websocket passthrough for notification-service. Kept public (no
-// requireAuth) since it's a broadcast channel, not a per-user feed. The
-// `ws: true` option makes http-proxy-middleware handle the Upgrade
-// handshake; index.ts wires `notificationSocketProxy.upgrade` to the raw
-// HTTP server's "upgrade" event, since Express never sees that event itself.
-export const notificationSocketProxy = createProxyMiddleware({
-  target: NOTIFICATION_SERVICE_URL,
-  changeOrigin: true,
-  ws: true,
-  pathFilter: ['/ws/notifications'],
-});
-app.use(notificationSocketProxy);
+// The notification websocket (/ws/notifications) isn't routed here: Express
+// never sees "upgrade" requests. See websocket.ts, wired up in index.ts.
 
 // Everything mounted after this point requires a valid JWT.
 app.use(requireAuth);

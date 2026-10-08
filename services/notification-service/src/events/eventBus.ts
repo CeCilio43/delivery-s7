@@ -25,7 +25,7 @@ function connect() {
 }
 
 /**
- * Subscribes to events matching a routing key (e.g. "hello.world") using a
+ * Subscribes to events matching a routing key (e.g. "order.confirmed") using a
  * private, exclusive queue bound to the shared exchange, and invokes the
  * handler for each message.
  */

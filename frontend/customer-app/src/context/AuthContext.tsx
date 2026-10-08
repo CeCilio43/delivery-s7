@@ -10,6 +10,7 @@ import {
 export interface AuthUser {
   id: string;
   role: Role;
+  email: string | null;
 }
 
 interface AuthContextValue {
@@ -25,7 +26,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 function userFromToken(token: string | null): AuthUser | null {
   if (!token) return null;
   const payload = decodeToken(token);
-  return payload ? { id: payload.sub, role: payload.role } : null;
+  return payload ? { id: payload.sub, role: payload.role, email: payload.email ?? null } : null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

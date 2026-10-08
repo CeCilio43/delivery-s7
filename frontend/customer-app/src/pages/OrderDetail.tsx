@@ -6,7 +6,8 @@ import { getPaymentsForOrder, type Payment } from '../api/payments';
 import { getRestaurantById } from '../api/restaurants';
 import AppNav from '../components/AppNav';
 import OrderStatusBadge from '../components/OrderStatusBadge';
-import { usePolling } from '../hooks/usePolling';
+import { useNotifications, useOrderUpdates } from '../context/NotificationContext';
+import { usePolling, ORDER_POLL_INTERVAL_MS } from '../hooks/usePolling';
 import { apiErrorMessage, formatDateTime, formatPrice } from '../lib/format';
 
 function statusMessage(order: Order, payment: Payment | undefined): string {
@@ -78,7 +79,17 @@ export default function OrderDetail() {
       .catch(() => {});
   }, [restaurantId]);
 
-  usePolling(refresh, order !== null && isAwaitingPayment(order));
+  // Status changes are pushed over the websocket; polling only remains as a
+  // slow safety net, and speeds up while the socket is disconnected.
+  const { isConnected } = useNotifications();
+  useOrderUpdates((update) => {
+    if (update.orderId === id) refresh();
+  });
+  usePolling(
+    refresh,
+    order !== null && isAwaitingPayment(order),
+    isConnected ? ORDER_POLL_INTERVAL_MS.connected : ORDER_POLL_INTERVAL_MS.disconnected,
+  );
 
   async function handleCancel() {
     if (!id) return;

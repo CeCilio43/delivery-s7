@@ -8,7 +8,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function AppNav() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const navigate = useNavigate();
 
@@ -35,13 +35,23 @@ export default function AppNav() {
           )}
         </NavLink>
       </div>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="shrink-0 rounded-2xl px-4 py-2 font-display text-[15px] font-medium text-muted transition-colors hover:text-charcoal"
-      >
-        Log out
-      </button>
+      <div className="flex min-w-0 items-center gap-2">
+        {user?.email && (
+          <span
+            className="truncate rounded-2xl bg-white px-4 py-2 font-body text-sm text-charcoal shadow-elevation-low"
+            title={`Logged in as ${user.email}`}
+          >
+            {user.email}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="shrink-0 rounded-2xl px-4 py-2 font-display text-[15px] font-medium text-muted transition-colors hover:text-charcoal"
+        >
+          Log out
+        </button>
+      </div>
     </nav>
   );
 }

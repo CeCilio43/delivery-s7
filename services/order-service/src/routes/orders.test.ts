@@ -152,14 +152,14 @@ describe('GET /orders/:id', () => {
 describe('POST /orders/:id/cancel', () => {
   it('cancels a PLACED order and publishes order.cancelled', async () => {
     mockedUpdateMany.mockResolvedValueOnce({ count: 1 });
-    mockedFindFirst.mockResolvedValueOnce({ id: 'order-1', status: 'CANCELLED' });
+    mockedFindFirst.mockResolvedValueOnce({ id: 'order-1', customerId: USER_ID, status: 'CANCELLED' });
 
     const res = await request(app).post('/orders/order-1/cancel').set('x-user-id', USER_ID);
 
     expect(res.status).toBe(200);
     expect(mockedPublish).toHaveBeenCalledWith(
       'order.cancelled',
-      expect.objectContaining({ orderId: 'order-1', reason: 'Cancelled by customer' }),
+      expect.objectContaining({ orderId: 'order-1', customerId: USER_ID, reason: 'Cancelled by customer' }),
     );
   });
 

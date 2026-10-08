@@ -21,6 +21,7 @@ export async function handlePaymentSucceeded(event: PaymentSucceededEvent): Prom
   const order = await prisma.order.findUniqueOrThrow({ where: { id: event.orderId } });
   const confirmed: OrderConfirmedEvent = {
     orderId: order.id,
+    customerId: order.customerId,
     restaurantId: order.restaurantId,
     confirmedAt: new Date().toISOString(),
   };
@@ -34,8 +35,10 @@ export async function handlePaymentFailed(event: PaymentFailedEvent): Promise<vo
   });
   if (count === 0) return;
 
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: event.orderId } });
   const cancelled: OrderCancelledEvent = {
-    orderId: event.orderId,
+    orderId: order.id,
+    customerId: order.customerId,
     reason: `Payment failed: ${event.reason}`,
     cancelledAt: new Date().toISOString(),
   };

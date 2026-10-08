@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getRestaurantById, type RestaurantDetail as RestaurantDetailData } from '../api/restaurants';
-import { addItemToCart } from '../api/cart';
 import { useCart } from '../context/CartContext';
 import AppNav from '../components/AppNav';
 import OpenBadge from '../components/OpenBadge';
@@ -23,11 +22,6 @@ export default function RestaurantDetail() {
       { menuItemId: item.id, name: item.name, price: item.price },
     );
     if (replaced) setStartedNewCart(true);
-
-    // Still fires the hello.world event-bus demo, which notification-service
-    // pushes back as a toast. Fire-and-forget: the cart itself lives in the
-    // browser, so a failed publish doesn't affect it.
-    addItemToCart(restaurant.id, item.id).catch(() => {});
   };
 
   const cartIsForThisRestaurant = cart !== null && cart.restaurantId === id;

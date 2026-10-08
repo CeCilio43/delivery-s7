@@ -4,7 +4,8 @@ import { getOrders, isAwaitingPayment, type Order } from '../api/orders';
 import { getRestaurants } from '../api/restaurants';
 import AppNav from '../components/AppNav';
 import OrderStatusBadge from '../components/OrderStatusBadge';
-import { usePolling } from '../hooks/usePolling';
+import { useNotifications, useOrderUpdates } from '../context/NotificationContext';
+import { usePolling, ORDER_POLL_INTERVAL_MS } from '../hooks/usePolling';
 import { formatDateTime, formatPrice } from '../lib/format';
 
 export default function Orders() {
@@ -33,7 +34,15 @@ export default function Orders() {
       .catch(() => {});
   }, [refresh]);
 
-  usePolling(refresh, orders.some(isAwaitingPayment));
+  // Status changes are pushed over the websocket; polling only remains as a
+  // slow safety net, and speeds up while the socket is disconnected.
+  const { isConnected } = useNotifications();
+  useOrderUpdates(refresh);
+  usePolling(
+    refresh,
+    orders.some(isAwaitingPayment),
+    isConnected ? ORDER_POLL_INTERVAL_MS.connected : ORDER_POLL_INTERVAL_MS.disconnected,
+  );
 
   return (
     <div className="min-h-screen bg-divider">

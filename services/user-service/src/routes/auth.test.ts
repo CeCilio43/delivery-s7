@@ -1,4 +1,5 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { hashPassword } from '../auth/password';
 import { prisma } from '../prisma';
@@ -86,6 +87,10 @@ describe('POST /login', () => {
       name: 'Login User',
       role: Role.CUSTOMER,
     });
+    // The customer-app reads the email from the token to show who's logged in.
+    expect(jwt.decode(res.body.token)).toEqual(
+      expect.objectContaining({ sub: 'user-2', role: Role.CUSTOMER, email: 'login@example.com' }),
+    );
   });
 
   it('returns 401 for the wrong password', async () => {

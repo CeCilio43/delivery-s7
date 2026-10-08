@@ -3,6 +3,7 @@ import { publishEvent, subscribeToEvent } from './eventBus';
 // Mirrors libs/events/order.confirmed.json and restaurant.order_received.json.
 export interface OrderConfirmedEvent {
   orderId: string;
+  customerId: string;
   restaurantId: string;
   confirmedAt: string;
 }

@@ -7,6 +7,8 @@ export type Role = 'CUSTOMER' | 'RESTAURANT_OWNER' | 'COURIER' | 'ADMIN';
 export interface TokenPayload {
   sub: string;
   role: Role;
+  // Optional: tokens issued before user-service added it don't carry it.
+  email?: string;
   iat: number;
   exp: number;
 }
