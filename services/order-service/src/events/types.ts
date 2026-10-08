@@ -10,16 +10,30 @@ export interface OrderCreatedEvent {
   createdAt: string;
 }
 
-export interface OrderConfirmedEvent {
+// Every status change after creation names both parties, so
+// notification-service can tell the customer and the restaurant owner.
+// restaurantOwnerId is null while the order is unpaid (the restaurant isn't
+// involved yet) or if this service doesn't know the owner.
+interface OrderStatusEvent {
   orderId: string;
   customerId: string;
   restaurantId: string;
+  restaurantOwnerId: string | null;
+}
+
+export interface OrderConfirmedEvent extends OrderStatusEvent {
   confirmedAt: string;
 }
 
-export interface OrderCancelledEvent {
-  orderId: string;
-  customerId: string;
+export interface OrderPreparingEvent extends OrderStatusEvent {
+  preparingAt: string;
+}
+
+export interface OrderReadyEvent extends OrderStatusEvent {
+  readyAt: string;
+}
+
+export interface OrderCancelledEvent extends OrderStatusEvent {
   reason: string;
   cancelledAt: string;
 }
@@ -36,4 +50,12 @@ export interface PaymentFailedEvent {
   orderId: string;
   reason: string;
   failedAt: string;
+}
+
+export interface RestaurantChangedEvent {
+  restaurantId: string;
+  ownerId: string;
+  name: string;
+  isOpen: boolean;
+  changedAt: string;
 }

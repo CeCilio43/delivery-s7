@@ -12,6 +12,9 @@ jest.mock('../prisma', () => ({
       findMany: jest.fn(),
       findFirst: jest.fn(),
     },
+    restaurantProjection: {
+      findUnique: jest.fn(),
+    },
   },
 }));
 jest.mock('../events/eventBus', () => ({ publishEvent: jest.fn() }));
@@ -21,6 +24,7 @@ const mockedUpdate = prisma.order.update as jest.Mock;
 const mockedUpdateMany = prisma.order.updateMany as jest.Mock;
 const mockedFindFirst = prisma.order.findFirst as jest.Mock;
 const mockedPublish = publishEvent as jest.Mock;
+const mockedFindRestaurant = prisma.restaurantProjection.findUnique as jest.Mock;
 const mockedFetch = jest.fn();
 
 const USER_ID = 'customer-1';
@@ -152,14 +156,26 @@ describe('GET /orders/:id', () => {
 describe('POST /orders/:id/cancel', () => {
   it('cancels a PLACED order and publishes order.cancelled', async () => {
     mockedUpdateMany.mockResolvedValueOnce({ count: 1 });
-    mockedFindFirst.mockResolvedValueOnce({ id: 'order-1', customerId: USER_ID, status: 'CANCELLED' });
+    mockedFindFirst.mockResolvedValueOnce({
+      id: 'order-1',
+      customerId: USER_ID,
+      restaurantId: 'restaurant-1',
+      status: 'CANCELLED',
+      confirmedAt: new Date('2026-10-08T12:00:00Z'),
+    });
+    mockedFindRestaurant.mockResolvedValueOnce({ id: 'restaurant-1', ownerId: 'owner-1' });
 
     const res = await request(app).post('/orders/order-1/cancel').set('x-user-id', USER_ID);
 
     expect(res.status).toBe(200);
     expect(mockedPublish).toHaveBeenCalledWith(
       'order.cancelled',
-      expect.objectContaining({ orderId: 'order-1', customerId: USER_ID, reason: 'Cancelled by customer' }),
+      expect.objectContaining({
+        orderId: 'order-1',
+        customerId: USER_ID,
+        restaurantOwnerId: 'owner-1',
+        reason: 'Cancelled by customer',
+      }),
     );
   });
 

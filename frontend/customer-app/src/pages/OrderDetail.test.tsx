@@ -51,4 +51,20 @@ describe('Order page', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel order' })).not.toBeInTheDocument();
   });
+
+  it('follows the restaurant preparing the order and stops offering to cancel', async () => {
+    signInAsCustomer();
+    let order: Order = makeOrder({ status: 'CONFIRMED' });
+    mockGet({ '/orders/order-1': () => order, '/restaurants/restaurant-1': restaurant });
+    renderWithProviders(<App />, { route: '/orders/order-1' });
+    expect(await screen.findByRole('button', { name: 'Cancel order' })).toBeInTheDocument();
+
+    order = makeOrder({ status: 'PREPARING' });
+    const socket = FakeWebSocket.latest();
+    socket.open();
+    socket.push({ type: 'order.updated', orderId: 'order-1', status: 'PREPARING' });
+
+    expect(await screen.findByText('The restaurant is preparing your order.', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel order' })).not.toBeInTheDocument();
+  });
 });

@@ -32,3 +32,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+/** Lets only callers whose (already verified) JWT has `role` through. */
+export function requireRole(role: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.role !== role) {
+      return res.status(403).json({ error: 'You do not have access to this' });
+    }
+    return next();
+  };
+}

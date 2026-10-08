@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { apiClient } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -76,7 +76,18 @@ export default function Login() {
   }
 
   return (
-    <AuthCard title="Restaurant sign in" subtitle="Manage the orders for your restaurant">
+    <AuthCard
+      title="Restaurant sign in"
+      subtitle="Manage the orders for your restaurant"
+      footer={
+        <>
+          New restaurant partner?{' '}
+          <Link to="/register" className="font-medium text-brand hover:text-brand-dark">
+            Create an account
+          </Link>
+        </>
+      }
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
         <TextField
           label="Email"

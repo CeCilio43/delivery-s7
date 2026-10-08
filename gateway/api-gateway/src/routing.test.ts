@@ -69,3 +69,27 @@ describe('API docs', () => {
     expect(res.text).toContain('swagger-ui');
   });
 });
+
+describe('owner routes', () => {
+  it('refuses a customer token before reaching any service', async () => {
+    const token = jwt.sign({ sub: 'customer-1', role: 'CUSTOMER' }, 'test-secret');
+
+    const res = await request(app).get('/owner/orders').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(received).toHaveLength(0);
+  });
+
+  it("forwards an owner's request with their identity", async () => {
+    const token = jwt.sign({ sub: 'owner-1', role: 'RESTAURANT_OWNER' }, 'test-secret');
+
+    const res = await request(app)
+      .post('/owner/orders/order-1/accept')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ path: '/owner/orders/order-1/accept' });
+    expect(received[0]?.['x-user-id']).toBe('owner-1');
+    expect(received[0]?.['x-user-role']).toBe('RESTAURANT_OWNER');
+  });
+});

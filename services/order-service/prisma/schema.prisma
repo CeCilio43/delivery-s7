@@ -24,6 +24,9 @@ model Order {
   restaurantId String
   status       OrderStatus @default(PLACED)
   totalAmount  Decimal     @db.Decimal(10, 2)
+  // Set when payment succeeds; owners only see orders that have one, so
+  // orders whose payment failed never reach the restaurant.
+  confirmedAt  DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -43,4 +46,17 @@ model OrderLine {
   quantity   Int
 
   @@index([orderId])
+}
+
+// order-service's own copy of who owns which restaurant, kept in sync from
+// restaurant-service's restaurant.created / restaurant.updated events. Used
+// to authorize owners on their restaurants' orders without calling
+// restaurant-service on every request.
+model RestaurantProjection {
+  id        String   @id // the restaurant's id in restaurant-service
+  ownerId   String
+  name      String
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
 }

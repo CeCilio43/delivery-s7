@@ -8,6 +8,11 @@ export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** "1 item", "3 items". */
+export function itemCount(count: number): string {
+  return `${count} ${count === 1 ? 'item' : 'items'}`;
+}
+
 /** The backend's `{ error }` message when there is one, else `fallback`. */
 export function apiErrorMessage(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {

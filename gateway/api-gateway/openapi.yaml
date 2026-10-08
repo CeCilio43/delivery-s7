@@ -10,6 +10,8 @@ info:
 
     **To call protected endpoints:** run `POST /login` (e.g. `jamie@example.com` / `password123`),
     copy the `token` from the response, click **Authorize** and paste it.
+    For the **Owner** endpoints, log in as a restaurant owner instead
+    (e.g. `sam@mariospizzeria.com` / `password123`).
 
     **Order flow (event-driven over RabbitMQ):** `POST /orders` publishes `order.created` →
     payment-service charges it and publishes `payment.succeeded` or `payment.failed` →
@@ -17,6 +19,11 @@ info:
     `restaurant.order_received`. The flow is asynchronous, so poll `GET /orders/{id}` for the
     outcome. Orders over 100.00 are declined by the simulated payment provider, so the failure
     path can be tested too.
+
+    **Restaurant side:** a paid (`CONFIRMED`) order shows up in `GET /owner/orders`. The owner
+    accepts it (`PREPARING`, publishes `order.preparing`), marks it ready (`READY`, publishes
+    `order.ready`) or rejects it (`CANCELLED` and refunded). Customer and owner both get every
+    status change pushed over the notification websocket.
 servers:
   - url: /
     description: This api-gateway
@@ -30,6 +37,10 @@ tags:
     description: order-service
   - name: Payments
     description: payment-service
+  - name: Owner restaurants
+    description: restaurant-service, restaurant owners only
+  - name: Owner orders
+    description: order-service, restaurant owners only
 
 paths:
   /health:
@@ -57,6 +68,33 @@ paths:
       responses:
         '201':
           description: Account created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /register/restaurant-owner:
+    post:
+      tags: [Auth]
+      summary: Register a restaurant owner account
+      description: >
+        Used by the restaurant-app's sign-up. The new owner is signed in straight
+        away and then registers their restaurant with `POST /owner/restaurants`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Credentials'
+                - type: object
+                  properties:
+                    name: { type: string }
+            example: { email: chef@pastacorner.com, password: password123, name: Chef }
+      responses:
+        '201':
+          description: Account created, with role `RESTAURANT_OWNER`
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
@@ -244,6 +282,244 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /owner/restaurants:
+    get:
+      tags: [Owner restaurants]
+      summary: List your restaurants, with their menus
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Your restaurants
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RestaurantDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Owner restaurants]
+      summary: Register a new restaurant
+      description: New restaurants start closed; open them with `PATCH` once the menu is set up.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewRestaurant' }
+      responses:
+        '201':
+          description: Created; publishes `restaurant.created`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestaurantDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /owner/restaurants/{id}:
+    get:
+      tags: [Owner restaurants]
+      summary: Get one of your restaurants
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RestaurantIdPath' }
+      responses:
+        '200':
+          description: The restaurant and its menu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestaurantDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Owner restaurants]
+      summary: Update details, or open / close the restaurant
+      description: Send only the fields to change. Publishes `restaurant.updated`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RestaurantIdPath' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantUpdate' }
+            example: { isOpen: false }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestaurantDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /owner/restaurants/{id}/menu-items:
+    post:
+      tags: [Owner restaurants]
+      summary: Add a menu item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RestaurantIdPath' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewMenuItem' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /owner/restaurants/{id}/menu-items/{itemId}:
+    patch:
+      tags: [Owner restaurants]
+      summary: Edit a menu item, or mark it (un)available
+      description: Send only the fields to change.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RestaurantIdPath' }
+        - { $ref: '#/components/parameters/MenuItemIdPath' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuItemUpdate' }
+            example: { isAvailable: false }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Owner restaurants]
+      summary: Remove a menu item
+      description: Past orders keep their own copy of the item's name and price.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RestaurantIdPath' }
+        - { $ref: '#/components/parameters/MenuItemIdPath' }
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /owner/orders:
+    get:
+      tags: [Owner orders]
+      summary: List paid orders for your restaurants
+      description: Oldest first. Orders still awaiting payment, or whose payment failed, are never shown.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          description: Comma-separated statuses, e.g. `CONFIRMED,PREPARING,READY`
+          schema: { type: string, example: 'CONFIRMED,PREPARING,READY' }
+        - name: restaurantId
+          in: query
+          description: Only this restaurant's orders
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /owner/orders/{id}:
+    get:
+      tags: [Owner orders]
+      summary: Get one of your restaurants' orders
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /owner/orders/{id}/accept:
+    post:
+      tags: [Owner orders]
+      summary: Accept an order and start preparing it
+      description: '`CONFIRMED` → `PREPARING`. Publishes `order.preparing`.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200': { $ref: '#/components/responses/OwnerOrder' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /owner/orders/{id}/ready:
+    post:
+      tags: [Owner orders]
+      summary: Mark an order ready for pickup
+      description: '`PREPARING` → `READY`. Publishes `order.ready`.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200': { $ref: '#/components/responses/OwnerOrder' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /owner/orders/{id}/reject:
+    post:
+      tags: [Owner orders]
+      summary: Reject an order
+      description: >
+        Allowed while `CONFIRMED` or `PREPARING`. The order is `CANCELLED`,
+        `order.cancelled` is published and payment-service refunds it.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 200 }
+            example: { reason: 'Out of mozzarella' }
+      responses:
+        '200': { $ref: '#/components/responses/OwnerOrder' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -257,6 +533,16 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    RestaurantIdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, example: 33333333-3333-3333-3333-333333333331 }
+    MenuItemIdPath:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, example: 44444444-4444-4444-4444-444444444441 }
 
   responses:
     BadRequest:
@@ -279,6 +565,16 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Logged in, but not as a restaurant owner
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    OwnerOrder:
+      description: The order in its new status
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Order' }
     Upstream:
       description: A downstream service or the event bus is unreachable
       content:
@@ -339,6 +635,43 @@ components:
               type: array
               items: { $ref: '#/components/schemas/MenuItem' }
 
+    NewRestaurant:
+      type: object
+      required: [name, address]
+      properties:
+        name: { type: string, maxLength: 100 }
+        address: { type: string, maxLength: 500 }
+        cuisine: { type: string, nullable: true, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 500 }
+      example: { name: 'Pasta Corner', address: '3 Canal Road', cuisine: 'Italian' }
+
+    RestaurantUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        address: { type: string, maxLength: 500 }
+        cuisine: { type: string, nullable: true, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 500 }
+        isOpen: { type: boolean }
+
+    NewMenuItem:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 500 }
+        price: { type: number, minimum: 0.01, maximum: 10000, description: 'At most 2 decimals' }
+        isAvailable: { type: boolean, default: true }
+      example: { name: 'Calzone', description: 'Folded pizza with ham and ricotta', price: 13.5 }
+
+    MenuItemUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 500 }
+        price: { type: number, minimum: 0.01, maximum: 10000 }
+        isAvailable: { type: boolean }
+
     CreateOrder:
       type: object
       required: [restaurantId, items]
@@ -369,6 +702,7 @@ components:
           type: string
           enum: [PLACED, CONFIRMED, PREPARING, READY, PICKED_UP, DELIVERED, COMPLETED, CANCELLED]
         totalAmount: { type: string, example: '29.5' }
+        confirmedAt: { type: string, format: date-time, nullable: true, description: 'When payment succeeded' }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         lines:

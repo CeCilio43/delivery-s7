@@ -1,0 +1,11 @@
+{
+  "event": "restaurant.updated",
+  "version": 1,
+  "payload": {
+    "restaurantId": "string",
+    "ownerId": "string",
+    "name": "string",
+    "isOpen": "boolean",
+    "changedAt": "ISO8601 string"
+  }
+}

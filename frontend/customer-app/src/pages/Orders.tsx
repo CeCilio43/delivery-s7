@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getOrders, isAwaitingPayment, type Order } from '../api/orders';
+import { getOrders, isInProgress, type Order } from '../api/orders';
 import { getRestaurants } from '../api/restaurants';
 import AppNav from '../components/AppNav';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import { useNotifications, useOrderUpdates } from '../context/NotificationContext';
 import { usePolling, ORDER_POLL_INTERVAL_MS } from '../hooks/usePolling';
-import { formatDateTime, formatPrice } from '../lib/format';
+import { formatDateTime, formatPrice, itemCount } from '../lib/format';
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -40,7 +40,7 @@ export default function Orders() {
   useOrderUpdates(refresh);
   usePolling(
     refresh,
-    orders.some(isAwaitingPayment),
+    orders.some(isInProgress),
     isConnected ? ORDER_POLL_INTERVAL_MS.connected : ORDER_POLL_INTERVAL_MS.disconnected,
   );
 
@@ -88,7 +88,7 @@ export default function Orders() {
                       </h2>
                       <p className="mt-1 font-body text-sm text-muted">
                         {formatDateTime(order.createdAt)} ·{' '}
-                        {order.lines.reduce((sum, line) => sum + line.quantity, 0)} items
+                        {itemCount(order.lines.reduce((sum, line) => sum + line.quantity, 0))}
                       </p>
                     </div>
                     <OrderStatusBadge status={order.status} />

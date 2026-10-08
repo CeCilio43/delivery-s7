@@ -1,0 +1,11 @@
+{
+  "event": "order.preparing",
+  "version": 1,
+  "payload": {
+    "orderId": "string",
+    "customerId": "string",
+    "restaurantId": "string",
+    "restaurantOwnerId": "string | null",
+    "preparingAt": "ISO8601 string"
+  }
+}

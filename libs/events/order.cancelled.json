@@ -4,6 +4,8 @@
   "payload": {
     "orderId": "string",
     "customerId": "string",
+    "restaurantId": "string",
+    "restaurantOwnerId": "string | null",
     "reason": "string",
     "cancelledAt": "ISO8601 string"
   }

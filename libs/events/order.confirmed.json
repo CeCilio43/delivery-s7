@@ -5,6 +5,7 @@
     "orderId": "string",
     "customerId": "string",
     "restaurantId": "string",
+    "restaurantOwnerId": "string | null",
     "confirmedAt": "ISO8601 string"
   }
 }

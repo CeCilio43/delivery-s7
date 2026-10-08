@@ -1,7 +1,15 @@
 # restaurant-app
 
-The restaurant owners' frontend: owners sign in and (soon) manage the orders
-for their restaurant. It talks only to the api-gateway, like customer-app.
+The restaurant owners' frontend. It talks only to the api-gateway (its
+`/owner/...` routes), like customer-app. Owners can:
+
+- work through paid orders on a live board: accept (preparing), mark ready,
+  or reject with a reason (the customer is refunded)
+- see new orders and cancellations the moment they happen (websocket push,
+  with polling as a fallback)
+- open or close the restaurant for new orders
+- manage the menu: add, edit, reprice, mark (un)available, delete
+- edit the restaurant's details, and register more restaurants
 
 To tell the two apps apart at a glance, this one uses light-grey surfaces on
 a darker grey page (customer-app uses white) and shows a "Restaurant" label.
@@ -36,12 +44,16 @@ Only `RESTAURANT_OWNER` accounts get in; customer accounts are refused.
 
 ```
 src/
-  api/         axios client for the gateway (adds the JWT)
-  components/  shared UI (Button, TextField, AppNav, ProtectedRoute, ...)
-  context/     AuthContext: the signed-in owner, from the stored JWT
-  lib/         token storage and decoding
-  pages/       one component per route (Login, Orders)
-  test/        Vitest setup and helpers (makeToken, renderWithProviders)
+  api/         axios client for the gateway (adds the JWT); restaurants, orders
+  components/  shared UI (AppNav, OpenToggle, OrderCard, MenuItemForm, Page, ...)
+  context/     Auth (signed-in owner), Restaurant (their restaurants and which
+               one is selected), Notification (websocket + toasts)
+  hooks/       usePolling: fallback while the websocket is down
+  lib/         token decoding, formatting helpers
+  pages/       one component per route (Login, Orders, Menu,
+               RestaurantSettings, NewRestaurant)
+  test/        Vitest setup and helpers (makeToken, renderWithProviders,
+               mockApi, a FakeWebSocket to push order updates)
 ```
 
 Tests sit next to the code they cover (`*.test.ts(x)`).

@@ -5,6 +5,7 @@ import { AxiosError, AxiosHeaders } from 'axios';
 import App from '../App';
 import { apiClient } from '../api/client';
 import { AUTH_TOKEN_KEY } from '../lib/token';
+import { makeRestaurant } from '../test/api';
 import { makeToken, renderWithProviders } from '../test/utils';
 
 function loginResponse(role: 'RESTAURANT_OWNER' | 'CUSTOMER') {
@@ -35,6 +36,10 @@ describe('Login', () => {
 
   it('signs an owner in and opens the orders page', async () => {
     const post = vi.spyOn(apiClient, 'post').mockResolvedValueOnce(loginResponse('RESTAURANT_OWNER'));
+    // What the orders page loads once signed in.
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url: string) => ({
+      data: url === '/owner/restaurants' ? [makeRestaurant()] : [],
+    }));
     renderWithProviders(<App />, { route: '/login' });
 
     await signIn();
@@ -43,7 +48,7 @@ describe('Login', () => {
       email: 'sam@mariospizzeria.com',
       password: 'password123',
     });
-    expect(await screen.findByRole('heading', { name: 'Incoming orders' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeInTheDocument();
     expect(screen.getByText('sam@mariospizzeria.com')).toBeInTheDocument();
     expect(localStorage.getItem(AUTH_TOKEN_KEY)).not.toBeNull();
   });

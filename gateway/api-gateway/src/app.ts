@@ -2,7 +2,7 @@ import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import swaggerUi from 'swagger-ui-express';
-import { requireAuth } from './middleware/requireAuth';
+import { requireAuth, requireRole } from './middleware/requireAuth';
 import { openApiSpec } from './openapi';
 
 export const app = express();
@@ -43,6 +43,8 @@ const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL ?? 'http://localhost
 
 // Auth routes are unauthenticated by design and proxy straight through to
 // user-service, so they're mounted ahead of the requireAuth gate below.
+// pathFilter matches on prefix, so '/register' also covers
+// '/register/restaurant-owner' (restaurant-app's sign-up).
 const PUBLIC_AUTH_PATHS = ['/register', '/login', '/auth/google', '/auth/google/callback'];
 
 // Restaurant browsing is public too — /restaurants covers both GET /restaurants
@@ -97,3 +99,9 @@ function authenticatedProxy(target: string, pathFilter: string[]) {
 
 app.use(authenticatedProxy(ORDER_SERVICE_URL, ['/orders']));
 app.use(authenticatedProxy(PAYMENT_SERVICE_URL, ['/payments']));
+
+// The restaurant-owner area. This is only the coarse role gate; the services
+// behind it still check that each restaurant or order belongs to the owner.
+app.use('/owner', requireRole('RESTAURANT_OWNER'));
+app.use(authenticatedProxy(RESTAURANT_SERVICE_URL, ['/owner/restaurants']));
+app.use(authenticatedProxy(ORDER_SERVICE_URL, ['/owner/orders']));

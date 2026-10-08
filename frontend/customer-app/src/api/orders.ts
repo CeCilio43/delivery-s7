@@ -56,12 +56,15 @@ export async function cancelOrder(id: string): Promise<Order> {
   return data;
 }
 
-// Payment is settled asynchronously over the event bus after an order is
-// placed, so a PLACED order is still waiting for its outcome.
-export function isAwaitingPayment(order: Order): boolean {
-  return order.status === 'PLACED';
+const FINAL_STATUSES: OrderStatus[] = ['DELIVERED', 'COMPLETED', 'CANCELLED'];
+
+// Payment and the restaurant's work both happen asynchronously after an
+// order is placed, so any non-final order can still change status.
+export function isInProgress(order: Order): boolean {
+  return !FINAL_STATUSES.includes(order.status);
 }
 
+// Once the restaurant starts preparing, only the restaurant can cancel.
 export function isCancellable(order: Order): boolean {
   return order.status === 'PLACED' || order.status === 'CONFIRMED';
 }

@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { publishEvent } from '../events/eventBus';
-import type { OrderCancelledEvent, OrderCreatedEvent } from '../events/types';
+import { publishOrderCancelled, publishSafely } from '../events/orderEvents';
+import type { OrderCreatedEvent } from '../events/types';
 import { requireUser } from '../middleware/requireUser';
 
 const router = Router();
@@ -139,6 +140,7 @@ router.get('/orders/:id', async (req, res) => {
   return res.json(order);
 });
 
+// Once the restaurant has started preparing, only the restaurant can cancel.
 const CANCELLABLE_STATUSES: OrderStatus[] = [OrderStatus.PLACED, OrderStatus.CONFIRMED];
 
 router.post('/orders/:id/cancel', async (req, res) => {
@@ -161,20 +163,7 @@ router.post('/orders/:id/cancel', async (req, res) => {
     return res.status(409).json({ error: `Order cannot be cancelled while ${order.status}` });
   }
 
-  const event: OrderCancelledEvent = {
-    orderId: order.id,
-    customerId: order.customerId,
-    reason: 'Cancelled by customer',
-    cancelledAt: new Date().toISOString(),
-  };
-  try {
-    await publishEvent('order.cancelled', event);
-  } catch (err) {
-    // The cancellation itself is committed; only downstream reactions (e.g.
-    // a refund) are delayed, so report success rather than failing it.
-    console.error('Failed to publish order.cancelled event', err);
-  }
-
+  await publishSafely(() => publishOrderCancelled(order, 'Cancelled by customer'));
   return res.json(order);
 });
 

@@ -5,6 +5,7 @@ export interface OrderConfirmedEvent {
   orderId: string;
   customerId: string;
   restaurantId: string;
+  restaurantOwnerId: string | null;
   confirmedAt: string;
 }
 

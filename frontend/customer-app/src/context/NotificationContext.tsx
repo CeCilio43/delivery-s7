@@ -51,9 +51,18 @@ function isOrderUpdatedMessage(data: unknown): data is OrderUpdatedMessage {
 }
 
 function orderUpdateMessage(update: OrderUpdate): string {
-  return update.status === 'CONFIRMED'
-    ? 'Order confirmed: payment received, the restaurant has your order.'
-    : `Order cancelled${update.reason ? `: ${update.reason}` : ''}.`;
+  switch (update.status) {
+    case 'CONFIRMED':
+      return 'Order confirmed: payment received, the restaurant has your order.';
+    case 'PREPARING':
+      return 'The restaurant is preparing your order.';
+    case 'READY':
+      return 'Your order is ready for pickup.';
+    case 'CANCELLED':
+      return `Order cancelled${update.reason ? `: ${update.reason}` : ''}.`;
+    default:
+      return `Your order is now ${update.status.toLowerCase()}.`;
+  }
 }
 
 // Browsers can't set headers on a WebSocket, so the gateway takes the JWT as

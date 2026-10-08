@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import { cancelOrder, getOrder, isAwaitingPayment, isCancellable, type Order } from '../api/orders';
+import { cancelOrder, getOrder, isInProgress, isCancellable, type Order } from '../api/orders';
 import { getPaymentsForOrder, type Payment } from '../api/payments';
 import { getRestaurantById } from '../api/restaurants';
 import AppNav from '../components/AppNav';
@@ -16,6 +16,10 @@ function statusMessage(order: Order, payment: Payment | undefined): string {
       return 'Processing your payment…';
     case 'CONFIRMED':
       return 'Payment received. The restaurant has your order.';
+    case 'PREPARING':
+      return 'The restaurant is preparing your order.';
+    case 'READY':
+      return 'Your order is ready and waiting to be picked up.';
     case 'CANCELLED':
       if (payment?.status === 'FAILED') {
         return 'Your payment was declined, so this order was cancelled.';
@@ -87,7 +91,7 @@ export default function OrderDetail() {
   });
   usePolling(
     refresh,
-    order !== null && isAwaitingPayment(order),
+    order !== null && isInProgress(order),
     isConnected ? ORDER_POLL_INTERVAL_MS.connected : ORDER_POLL_INTERVAL_MS.disconnected,
   );
 

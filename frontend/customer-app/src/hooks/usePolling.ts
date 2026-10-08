@@ -7,7 +7,7 @@ export const ORDER_POLL_INTERVAL_MS = { connected: 15000, disconnected: 2000 };
 
 /**
  * Calls `callback` every `intervalMs` while `active` is true. Used to watch
- * orders whose payment is still being settled over the event bus.
+ * orders that are still in progress (being paid for or prepared).
  */
 export function usePolling(callback: () => void, active: boolean, intervalMs = 2000): void {
   const callbackRef = useRef(callback);

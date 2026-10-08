@@ -77,6 +77,8 @@ describe('handleOrderCancelled', () => {
     await handleOrderCancelled({
       orderId: 'order-1',
       customerId: 'customer-1',
+      restaurantId: 'restaurant-1',
+      restaurantOwnerId: 'owner-1',
       reason: 'Cancelled by customer',
       cancelledAt: '',
     });

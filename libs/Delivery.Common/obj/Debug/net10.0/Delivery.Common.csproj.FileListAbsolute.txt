@@ -1,0 +1,13 @@
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\bin\Debug\net10.0\Delivery.Common.deps.json
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\bin\Debug\net10.0\Delivery.Common.dll
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\bin\Debug\net10.0\Delivery.Common.pdb
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.csproj.AssemblyReference.cache
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.AssemblyInfoInputs.cache
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.AssemblyInfo.cs
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.csproj.CoreCompileInputs.cache
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.sourcelink.json
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.dll
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\refint\Delivery.Common.dll
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\Delivery.Common.pdb
+C:\Users\bemme\OneDrive\Documenten\semester7\delivery\delivery-s7\libs\Delivery.Common\obj\Debug\net10.0\ref\Delivery.Common.dll
