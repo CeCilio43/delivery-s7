@@ -6,14 +6,21 @@ import { getPaymentsForOrder, type Payment } from '../api/payments';
 import { getRestaurantById } from '../api/restaurants';
 import AppNav from '../components/AppNav';
 import OrderStatusBadge from '../components/OrderStatusBadge';
+import PayNowButton from '../components/PayNowButton';
 import { useNotifications, useOrderUpdates } from '../context/NotificationContext';
 import { usePolling, ORDER_POLL_INTERVAL_MS } from '../hooks/usePolling';
 import { apiErrorMessage, formatDateTime, formatPrice } from '../lib/format';
 
+const PAYMENT_POLL_INTERVAL_MS = 1000;
+
 function statusMessage(order: Order, payment: Payment | undefined): string {
   switch (order.status) {
     case 'PLACED':
-      return 'Processing your payment…';
+      // The pending payment is created asynchronously once the order is placed.
+      if (!payment) return 'Getting your payment ready…';
+      if (payment.status === 'PENDING') return 'Your order is waiting for payment.';
+      if (payment.status === 'FAILED') return 'Your payment was declined.';
+      return 'Payment received. Confirming your order…';
     case 'CONFIRMED':
       return 'Payment received. The restaurant has your order.';
     case 'PREPARING':
@@ -50,11 +57,11 @@ export default function OrderDetail() {
       .then((orderData) => {
         setOrder(orderData);
         setError('');
-        // Payment status only refines the message for a cancellation
-        // (declined card vs. refund). Fetched separately, and only then, so
-        // the order still renders and polls while payment-service is slow
-        // or down.
-        if (orderData.status === 'CANCELLED') {
+        // The payment is needed to pay a placed order, and refines the
+        // message for a cancellation (declined card vs. refund). Fetched
+        // separately, and only then, so the order still renders and polls
+        // while payment-service is slow or down.
+        if (orderData.status === 'PLACED' || orderData.status === 'CANCELLED') {
           getPaymentsForOrder(id)
             .then((payments) => setPayment(payments[0]))
             .catch(() => {});
@@ -94,6 +101,16 @@ export default function OrderDetail() {
     order !== null && isInProgress(order),
     isConnected ? ORDER_POLL_INTERVAL_MS.connected : ORDER_POLL_INTERVAL_MS.disconnected,
   );
+  // Nothing is pushed when the pending payment is created (just after the
+  // order), so look for it quickly until "Pay now" can be shown.
+  usePolling(refresh, order?.status === 'PLACED' && !payment, PAYMENT_POLL_INTERVAL_MS);
+
+  function handlePaid(paid: Payment) {
+    setPayment(paid);
+    // order-service confirms (or cancels) the order asynchronously; the
+    // websocket push refreshes it, and this catches it if the push is missed.
+    setTimeout(refresh, 1000);
+  }
 
   async function handleCancel() {
     if (!id) return;
@@ -178,6 +195,12 @@ export default function OrderDetail() {
                   </span>
                 </div>
               </div>
+
+              {order.status === 'PLACED' && payment?.status === 'PENDING' && (
+                <div className="mt-6">
+                  <PayNowButton payment={payment} onPaid={handlePaid} onError={refresh} />
+                </div>
+              )}
 
               {isCancellable(order) && (
                 <div className="mt-6">

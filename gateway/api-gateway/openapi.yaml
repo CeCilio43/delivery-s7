@@ -14,11 +14,12 @@ info:
     (e.g. `sam@mariospizzeria.com` / `password123`).
 
     **Order flow (event-driven over RabbitMQ):** `POST /orders` publishes `order.created` →
-    payment-service charges it and publishes `payment.succeeded` or `payment.failed` →
-    order-service moves the order to `CONFIRMED` or `CANCELLED` → restaurant-service publishes
-    `restaurant.order_received`. The flow is asynchronous, so poll `GET /orders/{id}` for the
-    outcome. Orders over 100.00 are declined by the simulated payment provider, so the failure
-    path can be tested too.
+    payment-service creates a `PENDING` payment for it (find it with `GET /payments?orderId=…`) →
+    the customer pays it with `POST /payments/{id}/pay` ("Pay now"), which publishes
+    `payment.succeeded` or `payment.failed` → order-service moves the order to `CONFIRMED` or
+    `CANCELLED` → restaurant-service publishes `restaurant.order_received`. The flow is
+    asynchronous, so poll `GET /orders/{id}` for the outcome. Payments over 100.00 are declined
+    by the simulated payment provider, so the failure path can be tested too.
 
     **Restaurant side:** a paid (`CONFIRMED`) order shows up in `GET /owner/orders`. The owner
     accepts it (`PREPARING`, publishes `order.preparing`), marks it ready (`READY`, publishes
@@ -181,7 +182,8 @@ paths:
       summary: Place an order
       description: >
         Prices are looked up from restaurant-service. The order starts as
-        `PLACED`; payment happens asynchronously over the event bus.
+        `PLACED` and payment-service creates a `PENDING` payment for it, which
+        the customer pays with `POST /payments/{id}/pay`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -232,7 +234,8 @@ paths:
       summary: Cancel an order
       description: >
         Allowed while `PLACED` or `CONFIRMED`. Publishes `order.cancelled`;
-        payment-service then refunds a payment that already succeeded.
+        payment-service then refunds a payment that already succeeded, or
+        cancels one that was still pending.
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/IdPath' }
@@ -281,6 +284,36 @@ paths:
               schema: { $ref: '#/components/schemas/Payment' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /payments/{id}/pay:
+    post:
+      tags: [Payments]
+      summary: Pay a pending payment ("Pay now")
+      description: >
+        Charges the payment with the simulated provider, which approves amounts
+        up to 100.00 and declines anything larger. Publishes `payment.succeeded`
+        or `payment.failed`; order-service then confirms or cancels the order.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/IdPath' }
+      responses:
+        '200':
+          description: The payment, now `SUCCEEDED` or `FAILED`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The payment isn't pending (already paid, or its order was cancelled)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: The outcome couldn't be published; nothing was charged, try again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /owner/restaurants:
     get:
@@ -723,7 +756,7 @@ components:
         orderId: { type: string, format: uuid }
         customerId: { type: string, format: uuid }
         amount: { type: string, example: '29.5' }
-        status: { type: string, enum: [PENDING, SUCCEEDED, FAILED, REFUNDED] }
+        status: { type: string, enum: [PENDING, SUCCEEDED, FAILED, REFUNDED, CANCELLED] }
         providerRef: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

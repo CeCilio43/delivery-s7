@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddPrismaDatabase<PaymentDb>(npgsql => npgsql.MapPrismaEnum<PaymentStatus>());
 builder.Services.AddRabbitMqEventBus();
+builder.Services.AddScoped<MockPaymentProvider>();
 builder.Services.AddHostedService<Subscriptions>();
 
 var app = builder.Build();

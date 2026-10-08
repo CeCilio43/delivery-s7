@@ -9,6 +9,8 @@ public enum PaymentStatus
     Succeeded,
     Failed,
     Refunded,
+    /// <summary>Never paid, because its order was cancelled first.</summary>
+    Cancelled,
 }
 
 public class Transaction

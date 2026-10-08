@@ -32,7 +32,11 @@ describe('Cart page', () => {
   it('places the order with ids and quantities only, then opens it', async () => {
     withCart();
     const post = vi.spyOn(apiClient, 'post').mockResolvedValueOnce({ data: makeOrder() });
-    mockGet({ '/orders/order-1': makeOrder(), '/restaurants/restaurant-1': restaurant });
+    mockGet({
+      '/orders/order-1': makeOrder(),
+      '/restaurants/restaurant-1': restaurant,
+      '/payments': [{ id: 'pay-1', orderId: 'order-1', amount: '29.5', status: 'PENDING', createdAt: '' }],
+    });
     renderWithProviders(<App />, { route: '/cart' });
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Place order' }));
@@ -45,7 +49,7 @@ describe('Cart page', () => {
         { menuItemId: 'item-2', quantity: 1 },
       ],
     });
-    expect(await screen.findByText('Processing your payment…')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Pay now · 29.50' })).toBeInTheDocument();
     expect(localStorage.getItem(`cart:${CUSTOMER_ID}`)).toBeNull();
   });
 

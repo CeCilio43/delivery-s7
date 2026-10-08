@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, isInProgress, type Order } from '../api/orders';
+import { getPaymentsForOrder, type Payment } from '../api/payments';
 import { getRestaurants } from '../api/restaurants';
 import AppNav from '../components/AppNav';
 import OrderStatusBadge from '../components/OrderStatusBadge';
+import PayNowButton from '../components/PayNowButton';
 import { useNotifications, useOrderUpdates } from '../context/NotificationContext';
 import { usePolling, ORDER_POLL_INTERVAL_MS } from '../hooks/usePolling';
 import { formatDateTime, formatPrice, itemCount } from '../lib/format';
@@ -13,12 +15,24 @@ export default function Orders() {
   const [restaurantNames, setRestaurantNames] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  // Pending payments of unpaid (PLACED) orders, so they can be paid from here.
+  const [pendingPayments, setPendingPayments] = useState<Record<string, Payment>>({});
 
   const refresh = useCallback(() => {
     getOrders()
       .then((data) => {
         setOrders(data);
         setError('');
+        const unpaid = data.filter((order) => order.status === 'PLACED');
+        Promise.all(unpaid.map((order) => getPaymentsForOrder(order.id).catch(() => [])))
+          .then((results) =>
+            setPendingPayments(
+              Object.fromEntries(
+                results.flat().filter((p) => p.status === 'PENDING').map((p) => [p.orderId, p]),
+              ),
+            ),
+          )
+          .catch(() => {});
       })
       .catch(() => setError('Something went wrong loading your orders.'))
       .finally(() => setIsLoading(false));
@@ -76,27 +90,39 @@ export default function Orders() {
           ) : (
             <div className="flex flex-col gap-4">
               {orders.map((order) => (
-                <Link
+                <div
                   key={order.id}
-                  to={`/orders/${order.id}`}
-                  className="rounded-2xl bg-white p-6 shadow-elevation-low transition-shadow hover:shadow-elevation-high"
+                  className="rounded-2xl bg-white shadow-elevation-low transition-shadow hover:shadow-elevation-high"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="font-display text-[18px] font-medium text-charcoal">
-                        {restaurantNames[order.restaurantId] ?? 'Restaurant'}
-                      </h2>
-                      <p className="mt-1 font-body text-sm text-muted">
-                        {formatDateTime(order.createdAt)} ·{' '}
-                        {itemCount(order.lines.reduce((sum, line) => sum + line.quantity, 0))}
-                      </p>
+                  <Link to={`/orders/${order.id}`} className="block p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="font-display text-[18px] font-medium text-charcoal">
+                          {restaurantNames[order.restaurantId] ?? 'Restaurant'}
+                        </h2>
+                        <p className="mt-1 font-body text-sm text-muted">
+                          {formatDateTime(order.createdAt)} ·{' '}
+                          {itemCount(order.lines.reduce((sum, line) => sum + line.quantity, 0))}
+                        </p>
+                      </div>
+                      <OrderStatusBadge status={order.status} />
                     </div>
-                    <OrderStatusBadge status={order.status} />
-                  </div>
-                  <p className="mt-4 font-body text-sm font-medium text-charcoal">
-                    {formatPrice(order.totalAmount)}
-                  </p>
-                </Link>
+                    <p className="mt-4 font-body text-sm font-medium text-charcoal">
+                      {formatPrice(order.totalAmount)}
+                    </p>
+                  </Link>
+                  {order.status === 'PLACED' && pendingPayments[order.id] && (
+                    <div className="px-6 pb-6">
+                      <PayNowButton
+                        payment={pendingPayments[order.id]}
+                        // The order itself changes once order-service hears about
+                        // the payment, which is pushed and triggers a refresh.
+                        onPaid={refresh}
+                        onError={refresh}
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
