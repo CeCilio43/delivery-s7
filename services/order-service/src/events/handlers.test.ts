@@ -23,7 +23,11 @@ describe('handlePaymentSucceeded', () => {
 
   it('confirms a PLACED order and publishes order.confirmed', async () => {
     mockedUpdateMany.mockResolvedValueOnce({ count: 1 });
-    mockedFindUnique.mockResolvedValueOnce({ id: 'order-1', restaurantId: 'restaurant-1' });
+    mockedFindUnique.mockResolvedValueOnce({
+      id: 'order-1',
+      customerId: 'customer-1',
+      restaurantId: 'restaurant-1',
+    });
 
     await handlePaymentSucceeded(event);
 
@@ -33,7 +37,11 @@ describe('handlePaymentSucceeded', () => {
     });
     expect(mockedPublish).toHaveBeenCalledWith(
       'order.confirmed',
-      expect.objectContaining({ orderId: 'order-1', restaurantId: 'restaurant-1' }),
+      expect.objectContaining({
+        orderId: 'order-1',
+        customerId: 'customer-1',
+        restaurantId: 'restaurant-1',
+      }),
     );
   });
 
@@ -49,6 +57,7 @@ describe('handlePaymentSucceeded', () => {
 describe('handlePaymentFailed', () => {
   it('cancels a PLACED order and publishes order.cancelled with the reason', async () => {
     mockedUpdateMany.mockResolvedValueOnce({ count: 1 });
+    mockedFindUnique.mockResolvedValueOnce({ id: 'order-1', customerId: 'customer-1' });
 
     await handlePaymentFailed({
       paymentId: 'pay-1',
@@ -59,7 +68,11 @@ describe('handlePaymentFailed', () => {
 
     expect(mockedPublish).toHaveBeenCalledWith(
       'order.cancelled',
-      expect.objectContaining({ orderId: 'order-1', reason: 'Payment failed: Card declined' }),
+      expect.objectContaining({
+        orderId: 'order-1',
+        customerId: 'customer-1',
+        reason: 'Payment failed: Card declined',
+      }),
     );
   });
 });

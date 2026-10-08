@@ -12,12 +12,14 @@ export interface OrderCreatedEvent {
 
 export interface OrderConfirmedEvent {
   orderId: string;
+  customerId: string;
   restaurantId: string;
   confirmedAt: string;
 }
 
 export interface OrderCancelledEvent {
   orderId: string;
+  customerId: string;
   reason: string;
   cancelledAt: string;
 }

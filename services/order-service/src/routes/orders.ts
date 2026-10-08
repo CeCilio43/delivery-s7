@@ -163,6 +163,7 @@ router.post('/orders/:id/cancel', async (req, res) => {
 
   const event: OrderCancelledEvent = {
     orderId: order.id,
+    customerId: order.customerId,
     reason: 'Cancelled by customer',
     cancelledAt: new Date().toISOString(),
   };

@@ -3,6 +3,7 @@
   "version": 1,
   "payload": {
     "orderId": "string",
+    "customerId": "string",
     "reason": "string",
     "cancelledAt": "ISO8601 string"
   }

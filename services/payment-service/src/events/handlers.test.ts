@@ -74,7 +74,12 @@ describe('handleOrderCreated', () => {
 
 describe('handleOrderCancelled', () => {
   it('refunds a succeeded payment', async () => {
-    await handleOrderCancelled({ orderId: 'order-1', reason: 'Cancelled by customer', cancelledAt: '' });
+    await handleOrderCancelled({
+      orderId: 'order-1',
+      customerId: 'customer-1',
+      reason: 'Cancelled by customer',
+      cancelledAt: '',
+    });
 
     expect(mockedUpdateMany).toHaveBeenCalledWith({
       where: { orderId: 'order-1', status: 'SUCCEEDED' },

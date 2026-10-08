@@ -2,7 +2,7 @@ import amqplib, { type ChannelModel, type Channel, type ConsumeMessage } from 'a
 
 // Topic exchange shared by every service on the bus. Routing keys follow the
 // "<entity>.<event>" convention documented as JSON schemas under libs/events
-// (e.g. "hello.world", "order.confirmed").
+// (e.g. "order.confirmed", "restaurant.order_received").
 const EXCHANGE = 'delivery_events';
 
 let connectionPromise: Promise<{ connection: ChannelModel; channel: Channel }> | null = null;
