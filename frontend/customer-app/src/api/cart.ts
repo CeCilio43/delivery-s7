@@ -1,8 +1,8 @@
 import { apiClient } from './client';
 
-// There's no persisted cart yet — this call exists to trigger the
-// restaurant-service -> RabbitMQ -> notification-service "hello.world" demo
-// event when an item is added to the cart.
+// The cart itself lives in the browser (see context/CartContext.tsx). This
+// call only triggers the restaurant-service -> RabbitMQ ->
+// notification-service "hello.world" demo event when an item is added.
 export async function addItemToCart(restaurantId: string, menuItemId: string): Promise<void> {
   await apiClient.post(`/restaurants/${restaurantId}/cart/items`, { menuItemId });
 }

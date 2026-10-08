@@ -4,6 +4,9 @@ import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
 import Restaurants from './pages/Restaurants';
 import RestaurantDetail from './pages/RestaurantDetail';
+import Cart from './pages/Cart';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationToast from './components/NotificationToast';
 
@@ -28,6 +31,30 @@ function App() {
           element={
             <ProtectedRoute>
               <RestaurantDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders/:id"
+          element={
+            <ProtectedRoute>
+              <OrderDetail />
             </ProtectedRoute>
           }
         />

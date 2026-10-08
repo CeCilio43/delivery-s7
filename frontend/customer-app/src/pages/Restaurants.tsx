@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { getRestaurants, type RestaurantSummary } from '../api/restaurants';
+import AppNav from '../components/AppNav';
 import OpenBadge from '../components/OpenBadge';
 
 export default function Restaurants() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
   const [search, setSearch] = useState('');
   const [restaurants, setRestaurants] = useState<RestaurantSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,24 +31,12 @@ export default function Restaurants() {
     };
   }, [search]);
 
-  function handleLogout() {
-    logout();
-    navigate('/login', { replace: true });
-  }
-
   return (
     <div className="min-h-screen bg-divider">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="font-display text-[28px] font-semibold text-charcoal">Restaurants</h1>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="shrink-0 rounded-2xl bg-divider px-6 py-4 font-display text-[15px] font-medium text-charcoal transition-colors hover:bg-[#e8e8eb]"
-          >
-            Log out
-          </button>
-        </div>
+        <AppNav />
+
+        <h1 className="mt-8 font-display text-[28px] font-semibold text-charcoal">Restaurants</h1>
 
         <input
           type="search"
